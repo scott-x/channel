@@ -31,14 +31,14 @@ func Merge[T any](ins ...<-chan T) <-chan T {
 	return out
 }
 
-// 工序
-func Proceed[K, V any](in <-chan K, fn func(K) V) <-chan V {
+// 工序: channel to channel
+func C2C[K, V any](in <-chan K, exchange func(K) V) <-chan V {
 	out := make(chan V)
 
 	go func() {
 		defer close(out)
 		for c := range in {
-			out <- fn(c)
+			out <- exchange(c)
 		}
 	}()
 
