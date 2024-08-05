@@ -44,3 +44,17 @@ func C2C[K, V any](in <-chan K, exchange func(K) V) <-chan V {
 
 	return out
 }
+
+// 工序: channel to channel with sync.WaitGroup
+func C2CWithWG[K, V any](in <-chan K, exchange func(k K, wg *sync.WaitGroup) V, wg *sync.WaitGroup) <-chan V {
+	out := make(chan V)
+
+	go func() {
+		defer close(out)
+		for c := range in {
+			out <- exchange(c, wg)
+		}
+	}()
+
+	return out
+}
