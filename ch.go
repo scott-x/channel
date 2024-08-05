@@ -3,7 +3,7 @@ package channel
 import "sync"
 
 // 扇入函数（组件），把多个channel中的数据发送到一个channel中
-func Merge[T any](ins ...<-chan T) <-chan T {
+func merge[T any](ins ...<-chan T) <-chan T {
 	var wg sync.WaitGroup
 	out := make(chan T)
 
@@ -31,7 +31,7 @@ func Merge[T any](ins ...<-chan T) <-chan T {
 	return out
 }
 
-// 工序: channel to channel
+// channel to channel: transform one channel to another
 func C2C[K, V any](in <-chan K, exchange func(K) V) <-chan V {
 	out := make(chan V)
 
@@ -45,16 +45,14 @@ func C2C[K, V any](in <-chan K, exchange func(K) V) <-chan V {
 	return out
 }
 
-// 工序: channel to channel with sync.WaitGroup
-func C2CWithWG[K, V any](in <-chan K, exchange func(k K, wg *sync.WaitGroup) V, wg *sync.WaitGroup) <-chan V {
-	out := make(chan V)
+// channel to channel n times then merge
+// n workers to process the input channel
+func C2CNM[K, V any](in <-chan K, exchange func(K) V, n int) <-chan V {
+	outs := make([]<-chan V, n)
 
-	go func() {
-		defer close(out)
-		for c := range in {
-			out <- exchange(c, wg)
-		}
-	}()
+	for i := 0; i < n; i++ {
+		outs[i] = C2C(in, exchange)
+	}
 
-	return out
+	return merge(outs...)
 }
